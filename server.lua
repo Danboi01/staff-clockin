@@ -1,59 +1,62 @@
 local playerClockIns = {}
 
-RegisterCommand("clockin", function(source, args, rawCommand)
-    playerClockIns[source] = {time = os.time(), dept = dept} 
-    if IsPlayerAceAllowed(source, Config.AcePerm) then
-        SendNotification(source, "You have clocked in.", 'success')
-        local discordId
-        for _, identifier in ipairs(GetPlayerIdentifiers(source)) do
-            if string.sub(identifier, 1, string.len("discord:")) == "discord:" then
-                discordId = string.gsub(identifier, "discord:", "")
-            end
-        end
-        if discordId then
-            local webhookURL = Config.Webhook
-            local embedData = {
-                ["color"] = 5763719, 
-                ["title"] = "Clockin",
-                ["description"] = "\n**Discord**: <@".. discordId ..">",
-                ["footer"] = {
-                    ["text"] = "Made by danboi",
-                },
-            }
-            sendHttpRequest(webhookURL, {username = "Clockin Bot", embeds = {embedData}})
-        end
-    else
-        TriggerClientEvent('codem-notification', source, 'No Permission', 8000, 'error')
-    end
-end)
-
-RegisterCommand("clockout", function(source, args, rawCommand)
-    local currentTime = os.time()
-    local clockData = playerClockIns[source]
-    if not clockData then
-        SendNotification(source, "You arent clocked in.", 'error')
+RegisterCommand("clockin", function(source)
+    if playerClockIns[source] then
+        SendNotification(source, "You are already clocked in!", 'error')
         return
     end
-    local clockInTime = clockData.time
-    local totalTimeWorked = currentTime - clockInTime
-    SendNotification(source, "You have clocked out.", 'error')
-    playerClockIns[source] = nil 
-    local discordId
-    for _, identifier in ipairs(GetPlayerIdentifiers(source)) do
-        if string.sub(identifier, 1, string.len("discord:")) == "discord:" then
-            discordId = string.gsub(identifier, "discord:", "")
-        end
+
+    if not IsPlayerAceAllowed(source, Config.AcePerm) then
+        SendNotification(source, "You do not have permission!", 'error')
+        return
     end
+
+    playerClockIns[source] = {time = os.time()}
+
+    SendNotification(source, "You have clocked in.", 'success')
+
+    local discordId = GetDiscordId(source)
     if discordId then
         local webhookURL = Config.Webhook
         local embedData = {
-            ["color"] = 15548997, 
-            ["title"] = "Clockout",
-            ["description"] = "\n**Discord**: <@" .. discordId .. "> " .. formatTime(totalTimeWorked),
-            ["footer"] = {
-                ["text"] = "Made by danboi",
-            },
+            ["color"] = 5763719,
+            ["title"] = "Clock In",
+            ["description"] = "**Discord**: <@" .. discordId .. ">",
+            ["footer"] = { ["text"] = "Staff API" },
         }
-        sendHttpRequest(webhookURL, {username = "Clockin Bot", embeds = {embedData}})
+        sendHttpRequest(webhookURL, {embeds = {embedData}})
     end
-end, false)
+end)
+
+RegisterCommand("clockout", function(source)
+    local clockData = playerClockIns[source]
+    if not clockData then
+        SendNotification(source, "You are not clocked in!", 'error')
+        return
+    end
+
+    local totalTimeWorked = os.time() - clockData.time
+    playerClockIns[source] = nil
+    SendNotification(source, "You have clocked out.", 'success')
+
+    local discordId = GetDiscordId(source)
+    if discordId then
+        local webhookURL = Config.Webhook
+        local embedData = {
+            ["color"] = 15548997,
+            ["title"] = "Clock Out",
+            ["description"] = "**Discord**: <@" .. discordId .. "> " .. formatTime(totalTimeWorked),
+            ["footer"] = { ["text"] = "Staff API" },
+        }
+        sendHttpRequest(webhookURL, {embeds = {embedData}})
+    end
+end)
+
+function GetDiscordId(source)
+    for _, identifier in ipairs(GetPlayerIdentifiers(source)) do
+        if string.sub(identifier, 1, 8) == "discord:" then
+            return string.sub(identifier, 9)
+        end
+    end
+    return nil
+end
