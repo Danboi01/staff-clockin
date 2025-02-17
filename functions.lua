@@ -1,10 +1,10 @@
 function sendHttpRequest(url, data)
+    if url == "" then return end  
     PerformHttpRequest(url, function(err, text, headers)
-        if err then
-            return
-        end
+        if err then print("[Clockin] Webhook Error: " .. err) end
     end, 'POST', json.encode(data), { ['Content-Type'] = 'application/json' })
 end
+
 
 function formatTime(seconds)
     local remainingSeconds = seconds % 60
